@@ -1,5 +1,5 @@
 import joblib
-from data_prep import clean_text
+from src.data_prep import clean_text
 
 def predict_email(text: str):
     """Carrega o modelo salvo e faz a predição para um novo e-mail."""

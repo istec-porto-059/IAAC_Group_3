@@ -6,8 +6,9 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, recall_score
 
-from data_prep import load_and_preprocess_data
-from features import create_tfidf_features
+# Imports corrigidos com src.
+from src.data_prep import load_and_preprocess_data
+from src.features import create_tfidf_features
 
 def run_pipeline():
     print("1. Carregando e pré-processando dados...")

@@ -1,18 +1,23 @@
 import os
 import joblib
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, recall_score
 
-# Imports corrigidos com src.
 from src.data_prep import load_and_preprocess_data
 from src.features import create_tfidf_features
 
+# Garante que os caminhos apontam para a raiz do projeto
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_PATH = BASE_DIR / "data" / "raw" / "enron_data_fraud_labeled.csv"
+MODELS_DIR = BASE_DIR / "models"
+
 def run_pipeline():
     print("1. Carregando e pré-processando dados...")
-    df = load_and_preprocess_data("data/raw/enron_data_fraud_labeled.csv", n_normal_samples=10000)
+    df = load_and_preprocess_data(str(DATA_PATH), n_normal_samples=10000)
     
     print("2. Divisão treino/teste...")
     X_train, X_test, y_train, y_test = train_test_split(
@@ -49,9 +54,9 @@ def run_pipeline():
     print(f"\n>> Melhor Modelo para Cibersegurança: {best_model_name} (Recall Fraude: {best_recall:.4f})")
     
     print("5. Salvando artefatos na pasta models/...")
-    os.makedirs("models", exist_ok=True)
-    joblib.dump(best_model, "models/model.pkl")
-    joblib.dump(vectorizer, "models/vectorizer.pkl")
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    joblib.dump(best_model, MODELS_DIR / "model.pkl")
+    joblib.dump(vectorizer, MODELS_DIR / "vectorizer.pkl")
     print("Pipeline concluído com sucesso!")
 
 if __name__ == "__main__":

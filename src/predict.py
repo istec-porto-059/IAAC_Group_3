@@ -1,10 +1,15 @@
 import joblib
+from pathlib import Path
 from src.data_prep import clean_text
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODEL_PATH = BASE_DIR / "models" / "model.pkl"
+VECTORIZER_PATH = BASE_DIR / "models" / "vectorizer.pkl"
 
 def predict_email(text: str):
     """Carrega o modelo salvo e faz a predição para um novo e-mail."""
-    model = joblib.load("models/model.pkl")
-    vectorizer = joblib.load("models/vectorizer.pkl")
+    model = joblib.load(MODEL_PATH)
+    vectorizer = joblib.load(VECTORIZER_PATH)
     
     clean = clean_text(text)
     features = vectorizer.transform([clean])

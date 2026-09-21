@@ -7,11 +7,11 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, recall_score
 
-from src.data_prep import load_and_preprocess_data
-from src.features import create_tfidf_features
+from src.modules.email.data_prep import load_and_preprocess_data
+from src.modules.email.features import build_tfidf_features
 
-# Garante que os caminhos apontam para a raiz do projeto
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Garante que os caminhos apontam para a raiz do projeto (IAAC_Group_3)
+BASE_DIR = Path(__file__).resolve().parents[3]
 DATA_PATH = BASE_DIR / "data" / "raw" / "enron_data_fraud_labeled.csv"
 MODELS_DIR = BASE_DIR / "models"
 
@@ -25,7 +25,8 @@ def run_pipeline():
     )
     
     print("3. Extraindo features TF-IDF...")
-    X_train_tfidf, X_test_tfidf, vectorizer = create_tfidf_features(X_train, X_test)
+    # Corrigido de create_tfidf_features para build_tfidf_features
+    X_train_tfidf, X_test_tfidf, vectorizer = build_tfidf_features(X_train, X_test)
     
     print("4. Treinando e comparando múltiplos modelos...")
     models = {

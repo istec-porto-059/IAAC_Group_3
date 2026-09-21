@@ -1,6 +1,6 @@
 import joblib
 from pathlib import Path
-from src.data_prep import clean_text
+from src.modules.email.data_prep import load_and_preprocess_data
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 MODEL_PATH = BASE_DIR / "models" / "model.pkl"

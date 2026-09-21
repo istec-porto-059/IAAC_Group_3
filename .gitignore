@@ -1,27 +1,22 @@
-# Ambientes Virtuais
-.venv/
+# Ambientes virtuais e pacotes Python
 venv/
-env/
-
-# Cache do Python e Jupyter Notebooks
+.venv/
 __pycache__/
 *.pyc
-*.pyo
-.ipynb_checkpoints/
-.pytest_cache/
 
-# Dados e Modelos Pesados (Bloqueia arquivos > 100MB)
+# Dados brutos e processados (ficheiros grandes)
 data/raw/*
-data/processed/*
-models/*
-
-# Exceções para manter as pastas visíveis no GitHub
 !data/raw/.gitkeep
+data/processed/*
 !data/processed/.gitkeep
-!models/.gitkeep
 
-# Arquivos de Sistema e Chaves Privadas
+# Modelos treinados (pesados)
+models/*.pkl
+
+# Variáveis de ambiente / Chaves API
 .env
+
+# Ficheiros do sistema / IDEs
 .DS_Store
-Thumbs.db
-*.log
+.vscode/
+.idea/

@@ -1,96 +1,41 @@
-<<<<<<< HEAD
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-def create_tfidf_features(X_train, X_test, max_features=5000):
-    """Transforma os textos em matrizes numéricas TF-IDF."""
-    vectorizer = TfidfVectorizer(max_features=max_features, stop_words='english')
-    X_train_tfidf = vectorizer.fit_transform(X_train)
-    X_test_tfidf = vectorizer.transform(X_test)
-    return X_train_tfidf, X_test_tfidf, vectorizer
-=======
-from dataclasses import dataclass
-
+# src/features.py
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.impute import SimpleImputer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
-
-from .profiles import DatasetProfile
+import numpy as np
+from imblearn.over_sampling import SMOTE
 
 
-@dataclass(frozen=True)
-class FeatureGroups:
-    numeric: list[str]
-    categorical: list[str]
-    text: list[str]
+def remove_outliers_iqr(df: pd.DataFrame, columns: list) -> pd.DataFrame:
+    """
+    Remove outliers com base no método da Amplitude Interquartil (IQR).
+    Requisito do Módulo 4 para limpeza de valores extremos[cite: 1].
+    """
+    df_clean = df.copy()
+    for col in columns:
+        if col in df_clean.columns and pd.api.types.is_numeric_dtype(df_clean[col]):
+            Q1 = df_clean[col].quantile(0.25)  # 1º Quartil (25%)
+            Q3 = df_clean[col].quantile(0.75)  # 3º Quartil (75%)
+            IQR = Q3 - Q1                     # Amplitude Interquartil
+
+            limite_inferior = Q1 - 1.5 * IQR
+            limite_superior = Q3 + 1.5 * IQR
+
+            # Mantém apenas as linhas dentro dos limites aceitáveis
+            df_clean = df_clean[(df_clean[col] >= limite_inferior) & (
+                df_clean[col] <= limite_superior)]
+    return df_clean
 
 
-def _norm(name: str) -> str:
-    return "".join(ch for ch in str(name).lower() if ch.isalnum())
+def balance_data_smote(X_train: pd.DataFrame, y_train: pd.Series):
+    """
+    Aplica o algoritmo SMOTE (Synthetic Minority Over-sampling Technique)
+    para corrigir o desequilíbrio de classes (Imbalanced Data)[cite: 1].
+    """
+    smote = SMOTE(random_state=42)
+    X_resampled, y_resampled = smote.fit_resample(X_train, y_train)
 
+    print(
+        f"Distribuição original das classes: {pd.Series(y_train).value_counts().to_dict()}")
+    print(
+        f"Distribuição após SMOTE: {pd.Series(y_resampled).value_counts().to_dict()}")
 
-def detect_feature_groups(X: pd.DataFrame, profile: DatasetProfile) -> FeatureGroups:
-    numeric = list(X.select_dtypes(include="number").columns)
-    non_numeric = [c for c in X.columns if c not in numeric]
-
-    explicit_text = {_norm(c) for c in profile.text_columns}
-    text: list[str] = []
-    categorical: list[str] = []
-
-    for column in non_numeric:
-        series = X[column].dropna().astype(str)
-        avg_length = float(series.str.len().mean()) if not series.empty else 0.0
-        unique_count = int(series.nunique())
-        unique_ratio = unique_count / max(len(series), 1)
-
-        looks_like_text = (
-            _norm(column) in explicit_text
-            or avg_length >= 35
-            or (unique_count > 100 and unique_ratio > 0.30)
-        )
-
-        if looks_like_text:
-            text.append(column)
-        else:
-            categorical.append(column)
-
-    return FeatureGroups(numeric=numeric, categorical=categorical, text=text)
-
-
-def _prepare_text(values):
-    if hasattr(values, "fillna"):
-        return values.fillna("").astype(str)
-    return pd.Series(values).fillna("").astype(str)
-
-
-def build_preprocessor(groups: FeatureGroups) -> ColumnTransformer:
-    transformers = []
-
-    if groups.numeric:
-        numeric_pipeline = Pipeline([
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler(with_mean=False)),
-        ])
-        transformers.append(("numeric", numeric_pipeline, groups.numeric))
-
-    if groups.categorical:
-        categorical_pipeline = Pipeline([
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore", min_frequency=2)),
-        ])
-        transformers.append(("categorical", categorical_pipeline, groups.categorical))
-
-    for index, column in enumerate(groups.text):
-        text_pipeline = Pipeline([
-            ("prepare", FunctionTransformer(_prepare_text, validate=False)),
-            ("tfidf", TfidfVectorizer(max_features=5000, ngram_range=(1, 2), min_df=2, sublinear_tf=True)),
-        ])
-        transformers.append((f"text_{index}", text_pipeline, column))
-
-    if not transformers:
-        raise ValueError("Não foram encontradas features utilizáveis.")
-
-    return ColumnTransformer(transformers, remainder="drop")
->>>>>>> 14c4374 (chore: initial project setup)
+    return X_resampled, y_resampled

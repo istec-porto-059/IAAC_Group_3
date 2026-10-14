@@ -1,0 +1,8 @@
+Modelo,Precision,Recall,F1-Score,AUC-ROC
+Logistic_Regression,1.0,1.0,1.0,1.0
+Decision_Tree,1.0,1.0,1.0,1.0
+KNN,1.0,1.0,1.0,1.0
+Naive_Bayes,1.0,1.0,1.0,1.0
+SVM,1.0,1.0,1.0,1.0
+Random_Forest,1.0,1.0,1.0,1.0
+Gradient_Boosting,1.0,1.0,1.0,1.0

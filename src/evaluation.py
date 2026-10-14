@@ -1,45 +1,80 @@
-from dataclasses import dataclass
-
+# src/evaluation.py
+import os
 import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score, precision_score, recall_score
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    ConfusionMatrixDisplay,
+    roc_auc_score,
+    roc_curve
+)
 
 
-@dataclass(frozen=True)
-class ModelMetrics:
-    accuracy: float
-    precision_macro: float
-    recall_macro: float
-    f1_macro: float
-    f1_weighted: float
+def evaluate_all_models(best_models: dict, X_test, y_test, results_dir="results/"):
+    """
+    Avalia os modelos nos dados de teste e gera os gráficos e relatórios do Módulo 7[cite: 1].
+    """
+    os.makedirs(results_dir, exist_ok=True)
+    summary_list = []
 
-    def as_dict(self):
-        return {
-            "accuracy": self.accuracy,
-            "precision_macro": self.precision_macro,
-            "recall_macro": self.recall_macro,
-            "f1_macro": self.f1_macro,
-            "f1_weighted": self.f1_weighted,
-        }
+    # Prepara a figura para desenhar todas as Curvas ROC sobrepostas
+    plt.figure(figsize=(10, 7))
 
+    for model_name, model in best_models.items():
+        # Previsões de classe
+        y_pred = model.predict(X_test)
 
-def evaluate(y_true, y_pred) -> tuple[ModelMetrics, pd.DataFrame, pd.DataFrame]:
-    metrics = ModelMetrics(
-        accuracy=accuracy_score(y_true, y_pred),
-        precision_macro=precision_score(y_true, y_pred, average="macro", zero_division=0),
-        recall_macro=recall_score(y_true, y_pred, average="macro", zero_division=0),
-        f1_macro=f1_score(y_true, y_pred, average="macro", zero_division=0),
-        f1_weighted=f1_score(y_true, y_pred, average="weighted", zero_division=0),
-    )
+        # Probabilidades para o cálculo do ROC-AUC
+        if hasattr(model, "predict_proba"):
+            y_proba = model.predict_proba(X_test)[:, 1]
+        elif hasattr(model, "decision_function"):
+            y_proba = model.decision_function(X_test)
+        else:
+            y_proba = y_pred
 
-    labels = sorted(set(y_true) | set(y_pred), key=str)
-    matrix = pd.DataFrame(
-        confusion_matrix(y_true, y_pred, labels=labels),
-        index=[f"real:{label}" for label in labels],
-        columns=[f"pred:{label}" for label in labels],
-    )
+        # 1. Gerar e guardar Matriz de Confusão[cite: 1]
+        cm = confusion_matrix(y_test, y_pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+        disp.plot(cmap='Blues')
+        plt.title(f"Matriz de Confusão - {model_name}")
+        plt.savefig(os.path.join(results_dir, f"cm_{model_name}.png"))
+        plt.close()
 
-    report = pd.DataFrame(
-        classification_report(y_true, y_pred, output_dict=True, zero_division=0)
-    ).transpose()
+        # 2. Curva ROC e AUC Score[cite: 1]
+        try:
+            auc = roc_auc_score(y_test, y_proba)
+            fpr, tpr, _ = roc_curve(y_test, y_proba)
+            plt.plot(fpr, tpr, label=f"{model_name} (AUC = {auc:.2f})")
+        except Exception as e:
+            print(f"Não foi possível calcular ROC para {model_name}: {e}")
+            auc = 0.0
 
-    return metrics, matrix, report
+        # 3. Extrair Precision, Recall e F1-Score do relatório[cite: 1]
+        report = classification_report(y_test, y_pred, output_dict=True)
+        summary_list.append({
+            'Modelo': model_name,
+            'Precision': round(report['weighted avg']['precision'], 4),
+            'Recall': round(report['weighted avg']['recall'], 4),
+            'F1-Score': round(report['weighted avg']['f1-score'], 4),
+            'AUC-ROC': round(auc, 4)
+        })
+
+    # Finalizar e guardar o gráfico da Curva ROC Comparativa
+    plt.plot([0, 1], [0, 1], 'k--', label='Aleatório (AUC = 0.5)')
+    plt.xlabel('Taxa de Falsos Positivos (FPR)')
+    plt.ylabel('Taxa de Verdadeiros Positivos (TPR)')
+    plt.title('Comparativo da Curva ROC entre Modelos')
+    plt.legend()
+    plt.savefig(os.path.join(results_dir, "roc_curve_comparison.png"))
+    plt.close()
+
+    # 4. Exportar a Tabela Resumo Comparativa em CSV
+    df_results = pd.DataFrame(summary_list)
+    df_results.to_csv(os.path.join(
+        results_dir, "model_comparison.csv"), index=False)
+
+    print("\n================ Tabela Comparativa de Modelos ================")
+    print(df_results.to_string(index=False))
+
+    return df_results
